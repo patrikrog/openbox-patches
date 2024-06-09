@@ -1,0 +1,128 @@
+diff --git a/openbox/frame.c b/openbox/frame.c
+index fecac586..ac25ba9c 100644
+--- a/openbox/frame.c
++++ b/openbox/frame.c
+@@ -385,13 +385,7 @@ void frame_adjust_area(ObFrame *self, gboolean moved,
+                   (!self->max_horz || !self->max_vert ? self->bwidth : 0));
+ 
+         if (self->decorations & OB_FRAME_DECOR_TITLEBAR)
+-            self->size.top += ob_rr_theme->title_height + self->bwidth;
+-        else if (self->max_horz && self->max_vert) {
+-            /* A maximized and undecorated window needs a border on the
+-               top of the window to let the user still undecorate/unmaximize the
+-               window via the client menu. */
+-            self->size.top += self->bwidth;
+-        }
++            self->size.top += ob_rr_theme->title_height + (self->max_vert && self->max_horz ? 0 : self->bwidth);
+ 
+         if (self->decorations & OB_FRAME_DECOR_HANDLE &&
+             ob_rr_theme->handle_height > 0)
+@@ -493,38 +487,46 @@ void frame_adjust_area(ObFrame *self, gboolean moved,
+             }
+ 
+             if (self->bwidth) {
+-                gint titlesides;
+-
+                 /* height of titleleft and titleright */
+-                titlesides = (!self->max_horz ? ob_rr_theme->grip_width : 0);
+-
+-                XMoveResizeWindow(obt_display, self->titletop,
+-                                  ob_rr_theme->grip_width + self->bwidth, 0,
+-                                  /* width + bwidth*2 - bwidth*2 - grips*2 */
+-                                  self->width - ob_rr_theme->grip_width * 2,
+-                                  self->bwidth);
+-                XMoveResizeWindow(obt_display, self->titletopleft,
+-                                  0, 0,
+-                                  ob_rr_theme->grip_width + self->bwidth,
+-                                  self->bwidth);
+-                XMoveResizeWindow(obt_display, self->titletopright,
+-                                  self->client->area.width +
+-                                  self->size.left + self->size.right -
+-                                  ob_rr_theme->grip_width - self->bwidth,
+-                                  0,
+-                                  ob_rr_theme->grip_width + self->bwidth,
+-                                  self->bwidth);
++                gint titlesides = (!self->max_horz ? ob_rr_theme->grip_width : 0);
++                gint titlevert = (!self->max_vert ? self->bwidth : 0);
++
++                if (titlevert > 0) {
++                    XMoveResizeWindow(obt_display, self->titletop,
++                                    ob_rr_theme->grip_width + self->bwidth, 0,
++                                    /* width + bwidth*2 - bwidth*2 - grips*2 */
++                                    self->width - ob_rr_theme->grip_width * 2,
++                                    titlevert);
++                    XMoveResizeWindow(obt_display, self->titletopleft,
++                                    0, 0,
++                                    ob_rr_theme->grip_width + self->bwidth,
++                                    titlevert);
++                    XMoveResizeWindow(obt_display, self->titletopright,
++                                    self->client->area.width +
++                                    self->size.left + self->size.right -
++                                    ob_rr_theme->grip_width - self->bwidth,
++                                    0,
++                                    ob_rr_theme->grip_width + self->bwidth,
++                                    titlevert);
++                    XMapWindow(obt_display, self->titletop);
++                    XMapWindow(obt_display, self->titletopleft);
++                    XMapWindow(obt_display, self->titletopright);
++                } else {
++                    XUnmapWindow(obt_display, self->titletop);
++                    XUnmapWindow(obt_display, self->titletopleft);
++                    XUnmapWindow(obt_display, self->titletopright);
++                }
+ 
+                 if (titlesides > 0) {
+                     XMoveResizeWindow(obt_display, self->titleleft,
+-                                      0, self->bwidth,
++                                      0, (self->max_vert ? 0 : self->bwidth),
+                                       self->bwidth,
+                                       titlesides);
+                     XMoveResizeWindow(obt_display, self->titleright,
+                                       self->client->area.width +
+                                       self->size.left + self->size.right -
+                                       self->bwidth,
+-                                      self->bwidth,
++                                      (self->max_vert ? 0 : self->bwidth),
+                                       self->bwidth,
+                                       titlesides);
+ 
+@@ -535,9 +537,6 @@ void frame_adjust_area(ObFrame *self, gboolean moved,
+                     XUnmapWindow(obt_display, self->titleright);
+                 }
+ 
+-                XMapWindow(obt_display, self->titletop);
+-                XMapWindow(obt_display, self->titletopleft);
+-                XMapWindow(obt_display, self->titletopright);
+ 
+                 if (self->decorations & OB_FRAME_DECOR_TITLEBAR) {
+                     XMoveResizeWindow(obt_display, self->titlebottom,
+@@ -562,8 +561,8 @@ void frame_adjust_area(ObFrame *self, gboolean moved,
+             if (self->decorations & OB_FRAME_DECOR_TITLEBAR) {
+                 XMoveResizeWindow(obt_display, self->title,
+                                   (self->max_horz ? 0 : self->bwidth),
+-                                  self->bwidth,
+-                                  self->width, ob_rr_theme->title_height);
++                                  (self->max_vert ? 0 : self->bwidth),
++                                  self->width, ob_rr_theme->title_height + (self->max_vert ? self->bwidth * 2 : 0));
+ 
+                 XMapWindow(obt_display, self->title);
+ 
+@@ -665,9 +664,15 @@ void frame_adjust_area(ObFrame *self, gboolean moved,
+                                   ob_rr_theme->grip_width + self->bwidth,
+                                   self->bwidth);
+ 
+-                XMapWindow(obt_display, self->handlebottom);
+-                XMapWindow(obt_display, self->lgripbottom);
+-                XMapWindow(obt_display, self->rgripbottom);
++                if (!self->max_vert) {
++                    XMapWindow(obt_display, self->handlebottom);
++                    XMapWindow(obt_display, self->lgripbottom);
++                    XMapWindow(obt_display, self->rgripbottom);
++                } else {
++                    XUnmapWindow(obt_display, self->handlebottom);
++                    XUnmapWindow(obt_display, self->lgripbottom);
++                    XUnmapWindow(obt_display, self->rgripbottom);
++                }
+ 
+                 if (self->decorations & OB_FRAME_DECOR_HANDLE &&
+                     ob_rr_theme->handle_height > 0)

@@ -1,0 +1,9 @@
+Patches made against openbox git master.
+
+Tested and working on Gentoo with openbox 3.6.1-r8.
+
+keep-border-on-maximize.patch
+like it says on the tin.
+
+remove-borders-on-maximize.patch
+removes top and bottom borders during vertical maximize, like openbox does for horizontal maximize by default. Also changes the titlebar height to compensate for lack of borders during maximize.
